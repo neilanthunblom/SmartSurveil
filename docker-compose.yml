@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mysql:5.7
+    container_name: shinobi_db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SHINOBI_DB_PASSWORD}
+      MYSQL_DATABASE: ${SHINOBI_DB_NAME}
+      MYSQL_USER: ${SHINOBI_DB_USER}
+      MYSQL_PASSWORD: ${SHINOBI_DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - shinobi_network
+
+  shinobi:
+    image: shinobisystems/shinobi:dev
+    container_name: shinobi
+    environment:
+      MYSQL_HOST: ${SHINOBI_DB_HOST}
+      MYSQL_PORT: ${SHINOBI_DB_PORT}
+      MYSQL_USER: ${SHINOBI_DB_USER}
+      MYSQL_PASSWORD: ${SHINOBI_DB_PASSWORD}
+      MYSQL_DATABASE: ${SHINOBI_DB_NAME}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${SHINOBI_STORAGE_PATH}:/opt/shinobi/videos
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - shinobi_network
+    depends_on:
+      - db
+
+networks:
+  shinobi_network:
+
+volumes:
+  db_data:
+  videos_data:
