@@ -63,22 +63,3 @@ services:
     labels:
         - "com.centurylinklabs.watchtower.scope=scrypted"
     restart: unless-stopped
-        
-  # watchtower manages updates for Scrypted.
-  watchtower:
-      container_name: scrypted-watchtower
-      image: containrrr/watchtower
-      platform: linux/arm64
-      volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
-      ports:
-          - 10444:8080
-      environment:
-          - WATCHTOWER_HTTP_API_TOKEN=${SCRYPTED_RANDOM_KEY}
-          - WATCHTOWER_HTTP_API_UPDATE=true
-          - WATCHTOWER_SCOPE=scrypted
-          - WATCHTOWER_HTTP_API_PERIODIC_POLLS=true
-      labels:
-          - "com.centurylinklabs.watchtower.scope=scrypted"
-      command: --interval 3600 --cleanup --scope scrypted
-      restart: unless-stopped
