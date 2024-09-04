@@ -148,7 +148,7 @@ external_drive_config() {
 
 internal_drive_config() {
     output_message "Using internal storage. WARNING: This will use the internal storage of the device for video storage. This is not recommended for devices with sd cards (ie Raspberry Pi) as it may reduce the lifespan of the sd card." "always"
-    USE_EXTERNAL_STORAGE="false"
+    USE_EXTERNAL_STORAGE="FALSE"
     
     #check if the storage path is defined in the .env file
     storage_path=$(grep -i "LOCAL_STORAGE_PATH" .env | cut -d '=' -f2)
@@ -176,7 +176,7 @@ internal_drive_config() {
 USE_EXTERNAL_STORAGE=$(grep -i "USE_EXTERNAL_STORAGE" .env | cut -d '=' -f2)
 output_message "Using external storage: $USE_EXTERNAL_STORAGE"
 
-if [ "$USE_EXTERNAL_STORAGE" == "true" ]; then
+if [ "$USE_EXTERNAL_STORAGE" == "TRUE" ]; then
     # Check if the local storage path is defined in the .env file
     DRIVE_DEVICE=$(grep -i "DRIVE_DEVICE" .env | cut -d '=' -f2)
     if [ -z "$DRIVE_DEVICE" ]; then
