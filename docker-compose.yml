@@ -1,39 +1,82 @@
 services:
-  db:
+  shinobi-sql:
     image: mysql:5.7
-    container_name: shinobi_db
-    environment:
-      MYSQL_ROOT_PASSWORD: ${SHINOBI_DB_PASSWORD}
-      MYSQL_DATABASE: ${SHINOBI_DB_NAME}
-      MYSQL_USER: ${SHINOBI_DB_USER}
-      MYSQL_PASSWORD: ${SHINOBI_DB_PASSWORD}
     volumes:
-      - db_data:/var/lib/mysql
-    networks:
-      - shinobi_network
-
-  shinobi:
-    image: shinobisystems/shinobi:dev
-    container_name: shinobi
+      - ./shinobi/mysql:/var/lib/mysql
+      - ./shinobi/ShinobiDocker/mysql-init:/docker-entrypoint-initdb.d
     environment:
-      MYSQL_HOST: ${SHINOBI_DB_HOST}
-      MYSQL_PORT: ${SHINOBI_DB_PORT}
-      MYSQL_USER: ${SHINOBI_DB_USER}
-      MYSQL_PASSWORD: ${SHINOBI_DB_PASSWORD}
-      MYSQL_DATABASE: ${SHINOBI_DB_NAME}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    restart: unless-stopped
+  
+  shinobi:
+    build:
+      context: ./shinobi/ShinobiDocker
+      args:
+        SHINOBI_BRANCH: dev
+    volumes:
+      - /dev/shm/ShinobiRAM:/dev/shm/streams
+      - ./shinobi/shinobi:/home/Shinobi
     ports:
       - "8080:8080"
+    environment:
+      - HOME=/home/Shinobi
+      - DB_HOST=${MYSQL_HOST}
+      - DB_USER=${MYSQL_USER}
+      - DB_PASSWORD=${MYSQL_PASSWORD}
+      - DB_DATABASE=${MYSQL_DATABASE}
+      - SHINOBI_UPDATE=false
+    restart: unless-stopped
+  
+  wyze-bridge:
+    container_name: wyze-bridge
+    restart: unless-stopped
+    image: mrlt8/wyze-bridge:latest
+    ports:
+        - 1935:1935 # RTMP
+        - 8554:8554 # RTSP
+        - 8888:8888 # HLS
+        - 8889:8889 #WebRTC
+        - 8189:8189/udp # WebRTC/ICE
+        - 5000:5000 # WEB-UI
+    environment:
+        - WYZE_EMAIL=${WYZE_EMAIL}
+        - WYZE_PASSWORD=${WYZE_PASSWORD}
+        - API_ID=${WYZE_API_ID}
+        - API_KEY=${WYZE_API_KEY}
+        - WB_AUTH=True
+  
+  scrypted:
+    environment:
+      - SCRYPTED_WEBHOOK_UPDATE_AUTHORIZATION=Bearer ${SCRYPTED_RANDOM_KEY}
+      - SCRYPTED_WEBHOOK_UPDATE=http://localhost:10444/v1/update
+    image: ghcr.io/koush/scrypted
     volumes:
-      - ${SHINOBI_STORAGE_PATH}:/opt/shinobi/videos
-      - /etc/localtime:/etc/localtime:ro
-    networks:
-      - shinobi_network
-    depends_on:
-      - db
-
-networks:
-  shinobi_network:
-
-volumes:
-  db_data:
-  videos_data:
+      - ./scrypted/volume:/server/volume
+    container_name: scrypted
+    restart: unless-stopped
+    network_mode: host
+    logging:
+        driver: "none"
+    labels:
+        - "com.centurylinklabs.watchtower.scope=scrypted"
+        
+  # watchtower manages updates for Scrypted.
+  watchtower:
+      environment:
+          - WATCHTOWER_HTTP_API_TOKEN=${SCRYPTED_RANDOM_KEY}
+          - WATCHTOWER_HTTP_API_UPDATE=true
+          - WATCHTOWER_SCOPE=scrypted
+          - WATCHTOWER_HTTP_API_PERIODIC_POLLS=true
+      image: containrrr/watchtower
+      container_name: scrypted-watchtower
+      restart: unless-stopped
+      volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+      labels:
+          - "com.centurylinklabs.watchtower.scope=scrypted"
+      ports:
+          - 10444:8080
+      command: --interval 3600 --cleanup --scope scrypted
