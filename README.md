@@ -1,4 +1,4 @@
-# Local Surveillance Stack
+# SmartSurveil Stack
 
 ## Overview
 
@@ -41,7 +41,7 @@ Both of these configurations have the option for local facial recognition using 
 ### 1. Clone this repository and navigate to the directory
 
 ```bash
-git clone https://github.com/neilanthunblom/Surveillance-Local-ML-Stack
+git clone https://github.com/neilanthunblom/SmartSurveil
 cd local-surveillance-stack
 ```
 
