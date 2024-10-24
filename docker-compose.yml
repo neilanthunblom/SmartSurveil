@@ -1,6 +1,6 @@
 services:
   shinobi-sql:
-    image: mysql:5.7
+    image: mysql:latest
     volumes:
       - ./shinobi/mysql:/var/lib/mysql
       - ./shinobi/ShinobiDocker/mysql-init:/docker-entrypoint-initdb.d
@@ -14,11 +14,10 @@ services:
   shinobi:
     build:
       context: ./shinobi/ShinobiDocker
-      args:
-        SHINOBI_BRANCH: dev
     volumes:
       - /dev/shm/ShinobiRAM:/dev/shm/streams
       - ./shinobi/shinobi:/home/Shinobi
+      - /mnt/footage:/home/Shinobi/videos
     ports:
       - "8080:8080"
     environment:
