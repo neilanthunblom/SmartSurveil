@@ -45,6 +45,23 @@ git clone https://github.com/neilanthunblom/SmartSurveil
 cd local-surveillance-stack
 ```
 
+#### Raspberrypi 5 with ubuntu 24.04 - ethernet connection
+solved by editing /etc/netplan/50-cloud-init.yaml
+```bash
+sudo vim /etc/netplan/50-cloud-init.yaml
+```
+```bash
+network:
+    ethernets:
+        eth0:
+            dhcp4: true
+            optional: true
+```
+```bash
+sudo netplan generate
+sudo netplan apply
+```
+
 ### 2. Copy the `sample.env` file to `.env`
 
 Fill in the required fields. Here you can decide which services you want to run. If you already have a configured external hard drive, add its information here to automatically mount it.
