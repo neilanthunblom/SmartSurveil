@@ -81,3 +81,19 @@ services:
           - "com.centurylinklabs.watchtower.scope=scrypted"
       command: --interval 3600 --cleanup --scope scrypted
       restart: unless-stopped
+      
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    environment:
+      - SERVER_URL=${BASE_URL}
+    depends_on:
+      - scrypted
+    restart: unless-stopped
