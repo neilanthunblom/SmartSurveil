@@ -1,5 +1,6 @@
 services:
   shinobi-sql:
+    container_name: SmartSurveil-shinobi-sql
     image: mysql:latest
     volumes:
       - ./shinobi/mysql:/var/lib/mysql
@@ -12,6 +13,7 @@ services:
     restart: unless-stopped
   
   shinobi:
+    container_name: SmartSurveil-shinobi
     build:
       context: ./shinobi/ShinobiDocker
     volumes:
@@ -27,10 +29,12 @@ services:
       - DB_PASSWORD=${MYSQL_PASSWORD}
       - DB_DATABASE=${MYSQL_DATABASE}
       - SHINOBI_UPDATE=false
+    depends_on:
+      - shinobi-sql
     restart: unless-stopped
   
   wyze-bridge:
-    container_name: wyze-bridge
+    container_name: SmartSurveil-wyze-bridge
     image: mrlt8/wyze-bridge:latest
     ports:
         - 1935:1935 # RTMP
@@ -40,15 +44,25 @@ services:
         - 8189:8189/udp # WebRTC/ICE
         - 5000:5000 # WEB-UI
     environment:
+        - ON_DEMAND=False
+        - ENABLE_AUDIO=True
         - WYZE_EMAIL=${WYZE_EMAIL}
         - WYZE_PASSWORD=${WYZE_PASSWORD}
         - API_ID=${WYZE_API_ID}
         - API_KEY=${WYZE_API_KEY}
-        - WB_AUTH=True
+        - WB_AUTH=${WYZE_WEB_UI_AUTH}
+        - WB_USERNAME=${WYZE_WEB_UI_USERNAME}
+        - WB_PASSWORD=${WYZE_WEB_UI_PASSWORD}
+        - STREAM_AUTH=${WYZE_STREAM_AUTH_USERNAME}:${WYZE_STREAM_AUTH_PASSWORD}
+        - WB_RTMP_URL=rtmp://${WYZE_STREAM_URL}:1935
+        - WB_RTSP_URL=rtsp://${WYZE_STREAM_URL}:8554
+        - WB_HLS_URL=http://${WYZE_STREAM_URL}:8888
+        - WB_WEBRTC_URL=http://${WYZE_STREAM_URL}:8889
+        - WB_IP=${SERVER_IP}
     restart: unless-stopped
   
   scrypted:
-    container_name: scrypted
+    container_name: SmartSurveil-scrypted
     image: ghcr.io/koush/scrypted
     platform: linux/arm64
     volumes:
@@ -58,20 +72,18 @@ services:
       - SCRYPTED_WEBHOOK_UPDATE=http://localhost:10444/v1/update
     network_mode: host
     logging:
-        driver: "none"
+      driver: "none"
     labels:
-        - "com.centurylinklabs.watchtower.scope=scrypted"
+      - "com.centurylinklabs.watchtower.scope=scrypted"
     restart: unless-stopped
         
   # watchtower manages updates for Scrypted.
   watchtower:
-      container_name: scrypted-watchtower
+      container_name: SmartSurveil-scrypted-watchtower
       image: containrrr/watchtower
       platform: linux/arm64
       volumes:
           - /var/run/docker.sock:/var/run/docker.sock
-      ports:
-          - 10444:8080
       environment:
           - WATCHTOWER_HTTP_API_TOKEN=${SCRYPTED_RANDOM_KEY}
           - WATCHTOWER_HTTP_API_UPDATE=true
@@ -81,19 +93,32 @@ services:
           - "com.centurylinklabs.watchtower.scope=scrypted"
       command: --interval 3600 --cleanup --scope scrypted
       restart: unless-stopped
-      
+
   nginx:
+    container_name: SmartSurveil-nginx
     build:
       context: ./nginx
       dockerfile: Dockerfile
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/ssl:/etc/nginx/ssl
     environment:
-      - SERVER_URL=${BASE_URL}
+      - SERVER_URL=${SERVER_BASE_URL}
+      - USE_SHINOBI=${USE_SHINOBI}
+      - SHINOBI_URL=${SHINOBI_URL}
+      - USE_WYZE=${USE_WYZE}
+      - WYZE_URL=${WYZE_URL}
+      - WYZE_STREAM_URL=${WYZE_STREAM_URL}
+      - USE_SCRYPTED=${USE_SCRYPTED}
+      - SCRYPTED_URL=${SCRYPTED_URL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - scrypted
+      - watchtower
+      - shinobi
+      - wyze-bridge
     restart: unless-stopped
