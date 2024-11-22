@@ -1,7 +1,7 @@
 services:
   shinobi-sql:
     container_name: SmartSurveil-shinobi-sql
-    image: mysql:latest
+    image: mysql:8.0
     volumes:
       - ./shinobi/mysql:/var/lib/mysql
       - ./shinobi/ShinobiDocker/mysql-init:/docker-entrypoint-initdb.d
