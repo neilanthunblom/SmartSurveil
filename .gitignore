@@ -1,4 +1,5 @@
 .DS_Store
-.env
+*.env
+!sample.env
 *.key.pem
 *.key
