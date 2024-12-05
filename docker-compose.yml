@@ -1,44 +1,12 @@
 services:
-  # shinobi-sql:
-  #   container_name: SmartSurveil-shinobi-sql
-  #   image: mysql:8.0
-  #   volumes:
-  #     - ./shinobi/mysql:/var/lib/mysql
-  #     - ./shinobi/ShinobiDocker/mysql-init:/docker-entrypoint-initdb.d
-  #   environment:
-  #     - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-  #     - MYSQL_DATABASE=${MYSQL_DATABASE}
-  #     - MYSQL_USER=${MYSQL_USER}
-  #     - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-  #   restart: unless-stopped
-  
-  # shinobi:
-  #   container_name: SmartSurveil-shinobi
-  #   build:
-  #     context: ./shinobi/ShinobiDocker
-  #   volumes:
-  #     - /dev/shm/ShinobiRAM:/dev/shm/streams
-  #     - ./shinobi/shinobi:/home/Shinobi
-  #     - /mnt/footage:/home/Shinobi/videos
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - HOME=/home/Shinobi
-  #     - DB_HOST=${MYSQL_HOST}
-  #     - DB_USER=${MYSQL_USER}
-  #     - DB_PASSWORD=${MYSQL_PASSWORD}
-  #     - DB_DATABASE=${MYSQL_DATABASE}
-  #     - SHINOBI_UPDATE=false
-  #   depends_on:
-  #     - shinobi-sql
-  #   restart: unless-stopped
-  
   wyze-bridge:
     container_name: SmartSurveil-wyze-bridge
     hostname: wyze-bridge
     image: mrlt8/wyze-bridge:dev
     volumes:
+      - ./logs/wyze-bridge:/var/logs/wyze-bridge
       - ${LOCAL_STORAGE_PATH}/rawVideo:/record/
+      - ${LOCAL_STORAGE_PATH}/img:/img/
     ports:
         - 1935:1935 # RTMP
         - 8554:8554 # RTSP
@@ -50,11 +18,14 @@ services:
         - ON_DEMAND=true
         - ENABLE_AUDIO=False
         - IGNORE_OFFLINE=true
-        #- FPS_FIX=true
+        - RTSP_FW=${WYZE_USING_RTSP_FIRMWARE}
         - RECORD_ALL=${RECORD_ALL_CAMERAS}
-        - RECORD_PATH=/record/{cam_name}/%Y/%m/%d
-        - RECORD_FILE_NAME=%H_%M_%S
-        - RECORD_LENGTH=900s
+        # - RECORD_PATH=/record/{cam_name}/%Y/%m/%d
+        # - RECORD_FILE_NAME=%H_%M_%S
+        # - RECORD_LENGTH=900s
+        - SNAPSHOT=RTSP1
+        - IMG_DIR=/img/
+        - SNAPSHOT_FORMAT={cam_name}/%Y/%m/%d/%H/%M_%S.jpg
         - WYZE_EMAIL=${WYZE_EMAIL}
         - WYZE_PASSWORD=${WYZE_PASSWORD}
         - API_ID=${WYZE_API_ID}
@@ -62,10 +33,10 @@ services:
         - WB_AUTH=${WYZE_WEB_UI_AUTH}
         - WB_USERNAME=${WYZE_WEB_UI_USERNAME}
         - WB_PASSWORD=${WYZE_WEB_UI_PASSWORD}
-        # - WB_RTMP_URL=rtmp://${WYZE_STREAM_URL}:1935
-        # - WB_RTSP_URL=rtsp://${WYZE_STREAM_URL}:8554
-        # - WB_HLS_URL=http://${WYZE_STREAM_URL}:8888
-        # - WB_WEBRTC_URL=http://${WYZE_STREAM_URL}:8889
+        - WB_RTMP_URL=rtmp://${WYZE_STREAM_URL}:1935
+        - WB_RTSP_URL=rtsp://${WYZE_STREAM_URL}:8554
+        - WB_HLS_URL=http://${WYZE_STREAM_URL}:8888
+        - WB_WEBRTC_URL=http://${WYZE_STREAM_URL}:8889
         - WB_IP=${SERVER_IP}
     restart: unless-stopped
   
@@ -74,6 +45,7 @@ services:
     image: ghcr.io/koush/scrypted
     platform: linux/arm64
     volumes:
+      - ./logs/scrypted:/server/logs
       - ./volumes/scrypted:/server/volume
     environment:
       - SCRYPTED_WEBHOOK_UPDATE_AUTHORIZATION=Bearer ${SCRYPTED_RANDOM_KEY}
@@ -127,6 +99,5 @@ services:
     depends_on:
       - scrypted
       - watchtower
-      #- shinobi
       - wyze-bridge
     restart: unless-stopped
